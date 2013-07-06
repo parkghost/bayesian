@@ -23,13 +23,13 @@
  probability that a document belongs to C_j in general, without
  seeing the document first. P(D|C_j) is the probability of seeing
  such a document, given that it belongs to C_j. Here, by assuming
- that words appear independently in documents (this being the 
+ that words appear independently in documents (this being the
  "naive" assumption), we can estimate
 
     P(D|C_j) ~= P(W_1|C_j)*...*P(W_k|C_j)
 
  where P(W_i|C_j) is the probability of seeing the given word
- in a document of the given class. Finally, P(D) can be seen as 
+ in a document of the given class. Finally, P(D) can be seen as
  merely a scaling factor and is not strictly relevant to
  classificiation, unless you want to normalize the resulting
  scores and actually see probabilities. In this case, note that
@@ -61,7 +61,7 @@ import (
 )
 
 // defaultProb is the tiny non-zero probability that a word
-// we have not seen before appears in the class. 
+// we have not seen before appears in the class.
 const defaultProb = 0.00000000001
 
 // Class defines a set of classes that the classifier will
@@ -80,7 +80,6 @@ type Class string
 type Classifier struct {
 	Classes []Class
 	learned int // docs learned
-	seen    int // docs seen
 	datas   map[Class]*classData
 }
 
@@ -90,7 +89,6 @@ type Classifier struct {
 type serializableClassifier struct {
 	Classes []Class
 	Learned int
-	Seen    int
 	Datas   map[Class]*classData
 }
 
@@ -181,13 +179,13 @@ func NewClassifierFromReader(r io.Reader) (c *Classifier, err error) {
 	w := new(serializableClassifier)
 	err = dec.Decode(w)
 
-	return &Classifier{w.Classes, w.Learned, w.Seen, w.Datas}, err
+	return &Classifier{w.Classes, w.Learned, w.Datas}, err
 }
 
 // getPriors returns the prior probabilities for the
 // classes provided -- P(C_j).
-// 
-// TODO: There is a way to smooth priors, currently 
+//
+// TODO: There is a way to smooth priors, currently
 // not implemented here.
 func (c *Classifier) getPriors() (priors []float64) {
 	n := len(c.Classes)
@@ -210,12 +208,6 @@ func (c *Classifier) getPriors() (priors []float64) {
 // in the lifetime of this classifier.
 func (c *Classifier) Learned() int {
 	return c.learned
-}
-
-// Seen returns the number of documents ever classified
-// in the lifetime of this classifier.
-func (c *Classifier) Seen() int {
-	return c.seen
 }
 
 // WordCount returns the number of words counted for
@@ -267,7 +259,7 @@ func (c *Classifier) LogScores(document []string) (scores []float64, inx int, st
 	// calculate the score for each class
 	for index, class := range c.Classes {
 		data := c.datas[class]
-		// c is the sum of the logarithms 
+		// c is the sum of the logarithms
 		// as outlined in the refresher
 		score := math.Log(priors[index])
 		for _, word := range document {
@@ -276,7 +268,6 @@ func (c *Classifier) LogScores(document []string) (scores []float64, inx int, st
 		scores[index] = score
 	}
 	inx, strict = findMax(scores)
-	c.seen++
 	return scores, inx, strict
 }
 
@@ -298,7 +289,7 @@ func (c *Classifier) ProbScores(doc []string) (scores []float64, inx int, strict
 	// calculate the score for each class
 	for index, class := range c.Classes {
 		data := c.datas[class]
-		// c is the sum of the logarithms 
+		// c is the sum of the logarithms
 		// as outlined in the refresher
 		score := priors[index]
 		for _, word := range doc {
@@ -311,7 +302,6 @@ func (c *Classifier) ProbScores(doc []string) (scores []float64, inx int, strict
 		scores[i] /= sum
 	}
 	inx, strict = findMax(scores)
-	c.seen++
 	return scores, inx, strict
 }
 
@@ -335,7 +325,7 @@ func (c *Classifier) SafeProbScores(doc []string) (scores []float64, inx int, st
 	// calculate the score for each class
 	for index, class := range c.Classes {
 		data := c.datas[class]
-		// c is the sum of the logarithms 
+		// c is the sum of the logarithms
 		// as outlined in the refresher
 		score := priors[index]
 		logScore := math.Log(priors[index])
@@ -360,7 +350,6 @@ func (c *Classifier) SafeProbScores(doc []string) (scores []float64, inx int, st
 	if inx != logInx || strict != logStrict {
 		panic("possible underflow detected")
 	}
-	c.seen++
 	return scores, inx, strict
 }
 
@@ -398,7 +387,7 @@ func (c *Classifier) WriteToFile(name string) (err error) {
 //Serialize this classifier to GOB and write to Writer
 func (c *Classifier) WriteTo(w io.Writer) (err error) {
 	enc := gob.NewEncoder(w)
-	err = enc.Encode(&serializableClassifier{c.Classes, c.learned, c.seen, c.datas})
+	err = enc.Encode(&serializableClassifier{c.Classes, c.learned, c.datas})
 	return
 }
 

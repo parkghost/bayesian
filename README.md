@@ -1,3 +1,8 @@
+#REVISED 
+
+- remove unused seem field for goroutine safe 
+
+
 ## Naive Bayesian Classification
 
 Perform naive Bayesian classification into an arbitrary number of classes on sets of strings.
